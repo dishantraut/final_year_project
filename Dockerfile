@@ -1,15 +1,12 @@
-
-FROM python:3.11-slim AS base
+FROM python:3.11-alpine AS base
 
 # Prevent Python from writing .pyc files and enable unbuffered stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
 	PYTHONUNBUFFERED=1
 
 # Install system dependencies required for building some Python packages and
-# for runtime. Keep layers small and remove apt lists afterward.
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends build-essential ca-certificates curl \
-	&& rm -rf /var/lib/apt/lists/*
+# for runtime. This image is based on Alpine, so use apk instead of apt-get.
+RUN apk add --no-cache build-base ca-certificates curl
 
 WORKDIR /app
 
@@ -24,7 +21,9 @@ RUN pip install --upgrade pip \
 COPY . .
 
 # Create an unprivileged user and ensure ownership of application files
-RUN useradd --create-home --shell /bin/false appuser \
+# Use Alpine's addgroup/adduser for portability on alpine images.
+RUN addgroup -S appuser \
+	&& adduser -S -G appuser appuser \
 	&& chown -R appuser:appuser /app
 
 USER appuser
